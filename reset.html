@@ -55,15 +55,19 @@
 
   <script>
     (function () {
-      // Collect all URL params (Supabase may pass them as query or fragment)
-      var raw = window.location.search + '&' + window.location.hash.replace('#', '');
-      var params = new URLSearchParams(raw);
+      // Collect params from both query string and hash fragment
+      var searchParams = new URLSearchParams(window.location.search);
+      var hashParams = new URLSearchParams(
+        (window.location.hash || '').replace(/^#/, '')
+      );
 
-      var code         = params.get('code');
-      var accessToken  = params.get('access_token');
-      var refreshToken = params.get('refresh_token');
-      var type         = params.get('type');
-      var error        = params.get('error');
+      // Merge: query params take precedence
+      var merged = new URLSearchParams();
+      hashParams.forEach(function (v, k) { merged.set(k, v); });
+      searchParams.forEach(function (v, k) { merged.set(k, v); });
+
+      var code  = merged.get('code');
+      var error = merged.get('error');
 
       var msg = document.getElementById('msg');
       var btn = document.getElementById('btn');
@@ -72,21 +76,47 @@
       if (error) {
         msg.style.display = 'none';
         err.style.display = 'block';
-        err.textContent = 'Erro: ' + (params.get('error_description') || error);
+        err.textContent = 'Erro: ' + (merged.get('error_description') || error);
         return;
       }
 
-      // Build the deep link preserving all params so supabase_flutter can handle it
-      var deepLink = 'ournest://reset-callback?' + raw.replace(/^[?&]+/, '');
+      if (!code) {
+        msg.style.display = 'none';
+        err.style.display = 'block';
+        err.textContent =
+          'Link inválido ou expirado. Pede um novo link de recuperação na app.';
+        return;
+      }
+
+      // Deep link with only the code param (all supabase_flutter needs for PKCE)
+      var deepLink = 'ournest://reset-callback?code=' + encodeURIComponent(code);
+
+      // Android intent:// fallback — works inside Chrome Custom Tabs / WebViews
+      var intentLink =
+        'intent://reset-callback?code=' + encodeURIComponent(code) +
+        '#Intent;scheme=ournest;package=com.example.mycommunicationapp;end';
 
       btn.href = deepLink;
       btn.style.display = 'block';
       msg.textContent = 'Clica no botão abaixo para definir a nova palavra-passe.';
 
-      // Try to auto-open the app (works in native browsers; may be blocked in WebViews)
+      // Try to auto-open the app
+      var didOpen = false;
       setTimeout(function () {
+        if (didOpen) return;
         window.location.href = deepLink;
-      }, 600);
+      }, 500);
+
+      // If the custom scheme fails (e.g. WebView), try the Android intent after a delay
+      setTimeout(function () {
+        if (didOpen) return;
+        if (/android/i.test(navigator.userAgent)) {
+          btn.href = intentLink;
+          window.location.href = intentLink;
+        }
+      }, 1500);
+
+      window.addEventListener('blur', function () { didOpen = true; });
     })();
   </script>
 </body>
