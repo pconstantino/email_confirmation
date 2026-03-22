@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Nest – Recuperar Palavra-passe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #FDF6F0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+    .icon { font-size: 48px; margin-bottom: 20px; }
+    h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; }
+    p  { font-size: 15px; color: #6b7280; line-height: 1.5; margin-bottom: 28px; }
+    .btn {
+      display: block;
+      background: #E8735A;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 16px 24px;
+      border-radius: 16px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn:active { opacity: 0.85; }
+    .error { color: #ef4444; font-size: 14px; margin-top: 16px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔐</div>
+    <h1>Recuperar Palavra-passe</h1>
+    <p id="msg">A verificar o teu pedido…</p>
+    <a id="btn" class="btn" style="display:none">Abrir a app Our Nest</a>
+    <p class="error" id="err">Não foi possível verificar o pedido. Tenta pedir um novo link.</p>
+  </div>
+
+  <script>
+    (function () {
+      // Collect all URL params (Supabase may pass them as query or fragment)
+      var raw = window.location.search + '&' + window.location.hash.replace('#', '');
+      var params = new URLSearchParams(raw);
+
+      var code         = params.get('code');
+      var accessToken  = params.get('access_token');
+      var refreshToken = params.get('refresh_token');
+      var type         = params.get('type');
+      var error        = params.get('error');
+
+      var msg = document.getElementById('msg');
+      var btn = document.getElementById('btn');
+      var err = document.getElementById('err');
+
+      if (error) {
+        msg.style.display = 'none';
+        err.style.display = 'block';
+        err.textContent = 'Erro: ' + (params.get('error_description') || error);
+        return;
+      }
+
+      // Build the deep link preserving all params so supabase_flutter can handle it
+      var deepLink = 'ournest://reset-callback?' + raw.replace(/^[?&]+/, '');
+
+      btn.href = deepLink;
+      btn.style.display = 'block';
+      msg.textContent = 'Clica no botão abaixo para definir a nova palavra-passe.';
+
+      // Try to auto-open the app (works in native browsers; may be blocked in WebViews)
+      setTimeout(function () {
+        window.location.href = deepLink;
+      }, 600);
+    })();
+  </script>
+</body>
+</html>
